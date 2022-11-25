@@ -47,11 +47,31 @@ func GetUsers(pageSize int, pageNum int) []User {
 	return users
 }
 
-//编辑用户
+// DeleteUser 删除用户
+func DeleteUser(id int) int {
+	var usr = User{}
+	err = db.Where("id=?", id).Delete(&usr).Error
+	if err != nil {
+		return errmsg.ERROR
+	}
+	return errmsg.SUCCESS
+}
 
-//删除用户
+// EditUsr 更新用户信息
+func EditUsr(id int, data *User) int {
+	var user = User{}
+	var maps = make(map[string]interface{})
+	maps["username"] = data.Username
+	maps["role"] = data.Role
+	err = db.Model(&user).Where("id=?", id).Updates(maps).Error
 
-// 密码加密
+	if err != nil {
+		return errmsg.ERROR
+	}
+	return errmsg.SUCCESS
+}
+
+// ScryptPw 密码加密
 func ScryptPw(password string) string {
 	const KeyLen = 10
 	salt := make([]byte, 8)
@@ -64,4 +84,20 @@ func ScryptPw(password string) string {
 	}
 	fpw := base64.StdEncoding.EncodeToString(HashPw)
 	return fpw
+}
+
+// CheckLogin 登录验证
+func CheckLogin(username string, password string) int {
+	var user User
+	db.Where("username=?", username).First(&user)
+	if user.ID == 0 {
+		return errmsg.ERROR_USER_NOT_EXIST
+	}
+	if ScryptPw(password) != user.Password {
+		return errmsg.ERROR_PASSWORD_WRONG
+	}
+	if user.Role != 0 {
+		return errmsg.ERROR_USER_NO_RIGHT
+	}
+	return errmsg.SUCCESS
 }
